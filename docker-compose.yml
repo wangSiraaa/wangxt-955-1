@@ -1,0 +1,21 @@
+services:
+  bookstore:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bookstore-presale
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=bookstore-presale-secret-key-change-in-production
+    volumes:
+      - ./data:/app/data
+    networks:
+      - bookstore-network
+
+networks:
+  bookstore-network:
+    driver: bridge
