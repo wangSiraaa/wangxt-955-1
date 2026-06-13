@@ -85,11 +85,30 @@ export async function create(orderData: {
 export async function updatePaymentStatus(
   orderId: string,
   paymentStatus: PaymentStatus,
-  paidAt: string
+  paidAt?: string
+): Promise<Order | null> {
+  if (paidAt) {
+    await runQuery(
+      'UPDATE orders SET payment_status = ?, paid_at = ? WHERE id = ?',
+      [paymentStatus, paidAt, orderId]
+    );
+  } else {
+    await runQuery(
+      'UPDATE orders SET payment_status = ? WHERE id = ?',
+      [paymentStatus, orderId]
+    );
+  }
+  return findById(orderId);
+}
+
+export async function expireOrder(
+  orderId: string
 ): Promise<Order | null> {
   await runQuery(
-    'UPDATE orders SET payment_status = ?, paid_at = ? WHERE id = ?',
-    [paymentStatus, paidAt, orderId]
+    `UPDATE orders 
+     SET pickup_status = 'expired', payment_status = 'refunded'
+     WHERE id = ?`,
+    [orderId]
   );
   return findById(orderId);
 }

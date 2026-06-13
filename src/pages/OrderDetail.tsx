@@ -14,11 +14,14 @@ import {
   User,
   Phone,
   FileText,
+  Unlock,
+  RefreshCw,
 } from 'lucide-react';
 import { orderApi, presaleApi, notificationApi } from '../api/endpoints.js';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { cn, formatDate, formatDateTime } from '../lib/utils.js';
 import type { Order, Presale, Notification } from '../../shared/types.js';
+import dayjs from 'dayjs';
 
 const paymentStatusConfig: Record<
   Order['paymentStatus'],
@@ -36,7 +39,7 @@ const pickupStatusConfig: Record<
   pending: { label: '待到货', color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Clock },
   ready: { label: '待取书', color: 'text-accent-600', bgColor: 'bg-accent-500/10', icon: Package },
   picked: { label: '已取书', color: 'text-green-600', bgColor: 'bg-green-50', icon: CheckCircle },
-  expired: { label: '已逾期', color: 'text-red-600', bgColor: 'bg-red-50', icon: AlertTriangle },
+  expired: { label: '已取消', color: 'text-gray-500', bgColor: 'bg-gray-100', icon: XCircle },
 };
 
 export default function OrderDetail() {
@@ -48,10 +51,28 @@ export default function OrderDetail() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [expireLoading, setExpireLoading] = useState(false);
+  const [isOverdue, setIsOverdue] = useState(false);
 
   useEffect(() => {
     loadOrderDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (order && presale) {
+      checkOverdue();
+    }
+  }, [order, presale]);
+
+  const checkOverdue = () => {
+    if (!order || !presale) return;
+    if (order.pickupStatus === 'picked' || order.pickupStatus === 'expired') {
+      setIsOverdue(false);
+      return;
+    }
+    const overdue = dayjs().isAfter(dayjs(presale.pickupDeadline));
+    setIsOverdue(overdue);
+  };
 
   const loadOrderDetail = async () => {
     if (!id) return;
@@ -85,6 +106,23 @@ export default function OrderDetail() {
       alert(err instanceof Error ? err.message : '支付失败');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleExpireOrder = async () => {
+    if (!order) return;
+    if (!confirm('确认要释放该逾期订单的库存吗？释放后订单将取消，订金将退还会员。')) return;
+    
+    setExpireLoading(true);
+    try {
+      const updatedOrder = await orderApi.expireOrder(order.id);
+      setOrder(updatedOrder);
+      await loadOrderDetail();
+      alert('订单已成功释放，库存已退回。');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '释放失败');
+    } finally {
+      setExpireLoading(false);
     }
   };
 
@@ -381,14 +419,57 @@ export default function OrderDetail() {
                 </div>
               )}
 
-            {order.pickupStatus === 'expired' && (
-              <div className="p-4 bg-red-50 rounded-xl mb-4">
-                <div className="flex items-start gap-3">
+            {isOverdue && order.pickupStatus !== 'expired' && order.paymentStatus === 'paid' && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                <div className="flex items-start gap-3 mb-3">
                   <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-red-800">订单已逾期</p>
                     <p className="text-sm text-red-600">
-                      已超过取书截止日期，订单已自动取消，订金将退还
+                      已超过取书截止日期 {formatDate(presale?.pickupDeadline)}，需要释放库存
+                    </p>
+                  </div>
+                </div>
+                {(user?.role === 'clerk' || user?.role === 'warehouse') && (
+                  <button
+                    onClick={handleExpireOrder}
+                    disabled={expireLoading}
+                    className={cn(
+                      'w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all',
+                      !expireLoading
+                        ? 'bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    )}
+                  >
+                    {expireLoading ? (
+                      <>
+                        <div className="animate-spin w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
+                        释放中...
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-5 h-5" />
+                        释放库存并取消订单
+                      </>
+                    )}
+                  </button>
+                )}
+                {user?.role === 'member' && (
+                  <p className="text-sm text-red-600 text-center">
+                    请联系店员处理，订金将自动退还
+                  </p>
+                )}
+              </div>
+            )}
+
+            {order.pickupStatus === 'expired' && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                <div className="flex items-start gap-3">
+                  <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-red-800">订单已取消</p>
+                    <p className="text-sm text-red-600">
+                      已超过取书截止日期，订单已取消，订金 ¥{order.depositAmount} 已退还
                     </p>
                   </div>
                 </div>

@@ -12,5 +12,6 @@ router.post('/', authMiddleware, roleMiddleware('member'), orderController.creat
 router.put('/:id/pay', authMiddleware, roleMiddleware('member'), orderController.payOrder);
 router.post('/pickup', authMiddleware, roleMiddleware(['clerk', 'warehouse']), orderController.pickupOrder);
 router.post('/release-expired', authMiddleware, roleMiddleware(['clerk', 'warehouse']), orderController.releaseExpiredStock);
+router.put('/:id/expire', authMiddleware, roleMiddleware(['clerk', 'warehouse']), orderController.expireOrder);
 
 export default router;

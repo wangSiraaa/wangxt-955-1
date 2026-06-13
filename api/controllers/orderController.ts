@@ -81,3 +81,12 @@ export async function releaseExpiredStock(req: AuthRequest, res: Response) {
     res.status(500).json(errorResponse('释放逾期库存失败'));
   }
 }
+
+export async function expireOrder(req: AuthRequest, res: Response) {
+  try {
+    const order = await orderService.expireSingleOrder(req.params.id, req.user!);
+    res.json(successResponse(order));
+  } catch (err) {
+    res.status(400).json(errorResponse(err instanceof Error ? err.message : '订单逾期处理失败'));
+  }
+}

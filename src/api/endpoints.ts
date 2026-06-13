@@ -39,6 +39,7 @@ export const orderApi = {
   pay: (id: string) => apiPut<Order>(`/orders/${id}/pay`),
   pickup: (pickupCode: string) => apiPost<Order>('/orders/pickup', { pickupCode }),
   releaseExpired: () => apiPost<{ count: number; orders: Order[] }>('/orders/release-expired'),
+  expireOrder: (id: string) => apiPut<Order>(`/orders/${id}/expire`),
 };
 
 export const arrivalApi = {

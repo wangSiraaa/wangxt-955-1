@@ -186,16 +186,63 @@ async function seedInitialData(): Promise<void> {
         status: 'active',
         description: '余华代表作，讲述一个人和他的命运之间的友情',
       },
+      {
+        id: 'p_003',
+        bookTitle: '三体',
+        bookAuthor: '刘慈欣',
+        bookCover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=book%20cover%20of%20The%20Three%20Body%20Problem%20sci-fi&image_size=portrait_4_3',
+        bookIsbn: '9787536692930',
+        price: 68.00,
+        deposit: 25.00,
+        totalStock: 80,
+        lockedStock: 2,
+        presaleStartTime: dayjs().subtract(20, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        presaleEndTime: dayjs().subtract(15, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        pickupDeadline: dayjs().subtract(3, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        status: 'arrived',
+        description: '中国科幻里程碑之作，雨果奖获奖作品',
+      },
     ];
 
     for (const p of presales) {
       await runQuery(
         `INSERT INTO presales (id, book_title, book_author, book_cover, book_isbn, price, deposit, 
-          total_stock, presale_start_time, presale_end_time, pickup_deadline, status, description) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_stock, locked_stock, presale_start_time, presale_end_time, pickup_deadline, status, description) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [p.id, p.bookTitle, p.bookAuthor, p.bookCover, p.bookIsbn, p.price, p.deposit,
-         p.totalStock, p.presaleStartTime, p.presaleEndTime, p.pickupDeadline, p.status, p.description]
+         p.totalStock, (p as any).lockedStock || 0, p.presaleStartTime, p.presaleEndTime, p.pickupDeadline, p.status, p.description]
       );
+    }
+
+    const orderCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM orders');
+    if (orderCount && orderCount.count === 0) {
+      const orders = [
+        {
+          id: 'o_001',
+          orderNo: 'BS20260610001',
+          presaleId: 'p_003',
+          userId: 'u_member',
+          userName: '王会员',
+          quantity: 2,
+          totalAmount: 136.00,
+          depositAmount: 50.00,
+          paymentStatus: 'paid',
+          pickupStatus: 'ready',
+          pickupCode: '3T7K9P',
+          paidAt: dayjs().subtract(10, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        },
+      ];
+
+      for (const o of orders) {
+        await runQuery(
+          `INSERT INTO orders (id, order_no, presale_id, user_id, user_name, quantity, 
+            total_amount, deposit_amount, payment_status, pickup_status, pickup_code, paid_at, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [o.id, o.orderNo, o.presaleId, o.userId, o.userName, o.quantity,
+           o.totalAmount, o.depositAmount, o.paymentStatus, o.pickupStatus, o.pickupCode, o.paidAt,
+           dayjs().subtract(10, 'day').format('YYYY-MM-DD HH:mm:ss')]
+        );
+      }
     }
 
     console.log('Initial data seeded successfully');
