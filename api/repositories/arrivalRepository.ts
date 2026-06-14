@@ -6,6 +6,7 @@ interface ArrivalRow {
   id: string;
   presale_id: string;
   quantity: number;
+  batch_no: number;
   arrived_at: string;
   operator_id: string;
   remark: string;
@@ -35,13 +36,14 @@ export async function create(arrivalData: {
   quantity: number;
   operatorId: string;
   remark: string;
+  batchNo?: number;
 }): Promise<Arrival> {
   const id = generateId('a_');
 
   await runQuery(
-    `INSERT INTO arrivals (id, presale_id, quantity, operator_id, remark)
-     VALUES (?, ?, ?, ?, ?)`,
-    [id, arrivalData.presaleId, arrivalData.quantity, arrivalData.operatorId, arrivalData.remark]
+    `INSERT INTO arrivals (id, presale_id, quantity, batch_no, operator_id, remark)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, arrivalData.presaleId, arrivalData.quantity, arrivalData.batchNo || 1, arrivalData.operatorId, arrivalData.remark]
   );
 
   const created = await findById(id);

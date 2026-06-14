@@ -22,6 +22,7 @@ const paymentStatusConfig: Record<Order['paymentStatus'], { label: string; color
   unpaid: { label: '待支付', color: 'text-amber-600', icon: CreditCard },
   paid: { label: '已支付', color: 'text-green-600', icon: CheckCircle },
   refunded: { label: '已退款', color: 'text-gray-500', icon: XCircle },
+  partial_refunded: { label: '部分退款', color: 'text-orange-600', icon: RefreshCw },
 };
 
 const pickupStatusConfig: Record<Order['pickupStatus'], { label: string; color: string; icon: typeof Clock }> = {
@@ -29,6 +30,8 @@ const pickupStatusConfig: Record<Order['pickupStatus'], { label: string; color: 
   ready: { label: '待取书', color: 'text-accent-600', icon: Package },
   picked: { label: '已取书', color: 'text-green-600', icon: CheckCircle },
   expired: { label: '已取消', color: 'text-red-600', icon: XCircle },
+  waitlisted: { label: '候补中', color: 'text-purple-600', icon: Clock },
+  transferred: { label: '已转单', color: 'text-teal-600', icon: RefreshCw },
 };
 
 const getOrderDisplayStatus = (order: Order, presale?: Presale): { label: string; color: string; bgColor: string; icon: typeof Clock; isOverdue: boolean } => {

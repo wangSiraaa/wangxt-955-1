@@ -10,6 +10,7 @@ import {
   CheckCheck,
   ArrowLeft,
   BookOpen,
+  CreditCard,
 } from 'lucide-react';
 import { notificationApi, orderApi, presaleApi } from '../api/endpoints.js';
 import { useAuthStore } from '../store/useAuthStore.js';
@@ -37,6 +38,42 @@ const notificationTypeConfig: Record<
     icon: XCircle,
     color: 'text-red-600',
     bgColor: 'bg-red-50',
+  },
+  waitlist_notify: {
+    label: '候补通知',
+    icon: Clock,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  transfer_request: {
+    label: '转单申请',
+    icon: ArrowLeft,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+  },
+  transfer_completed: {
+    label: '转单完成',
+    icon: CheckCircle,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  batch_arrived: {
+    label: '批次到货',
+    icon: BookOpen,
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+  },
+  refund_completed: {
+    label: '退款完成',
+    icon: CreditCard,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+  },
+  balance_due: {
+    label: '尾款提醒',
+    icon: CreditCard,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
   },
 };
 

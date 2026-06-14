@@ -10,6 +10,7 @@ interface NotificationRow {
   content: string;
   sent_at: string;
   read_at: string | null;
+  related_id?: string;
 }
 
 export async function findAll(): Promise<Notification[]> {
@@ -46,13 +47,14 @@ export async function create(notificationData: {
   userId: string;
   type: NotificationType;
   content: string;
+  relatedId?: string;
 }): Promise<Notification> {
   const id = generateId('n_');
 
   await runQuery(
-    `INSERT INTO notifications (id, order_id, user_id, type, content)
-     VALUES (?, ?, ?, ?, ?)`,
-    [id, notificationData.orderId, notificationData.userId, notificationData.type, notificationData.content]
+    `INSERT INTO notifications (id, order_id, user_id, type, content, related_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, notificationData.orderId, notificationData.userId, notificationData.type, notificationData.content, notificationData.relatedId || null]
   );
 
   const created = await findById(id);

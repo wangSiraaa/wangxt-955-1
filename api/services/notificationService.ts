@@ -22,6 +22,7 @@ export async function createNotification(notificationData: {
   userId: string;
   type: NotificationType;
   content: string;
+  relatedId?: string;
 }): Promise<Notification> {
   return notificationRepository.create(notificationData);
 }

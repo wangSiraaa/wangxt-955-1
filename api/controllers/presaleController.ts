@@ -24,6 +24,18 @@ export async function getPresaleById(req: Request, res: Response) {
   }
 }
 
+export async function getPresaleDetail(req: Request, res: Response) {
+  try {
+    const detail = await presaleService.getPresaleDetail(req.params.id);
+    if (!detail) {
+      return res.status(404).json(errorResponse('预售不存在'));
+    }
+    res.json(successResponse(detail));
+  } catch (err) {
+    res.status(500).json(errorResponse('获取预售详情失败'));
+  }
+}
+
 export async function createPresale(req: AuthRequest, res: Response) {
   try {
     const presale = await presaleService.createPresale(req.body, req.user!);

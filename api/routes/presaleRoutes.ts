@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/', presaleController.getAllPresales);
 router.get('/check-availability', presaleController.checkAvailability);
 router.get('/:id', presaleController.getPresaleById);
+router.get('/:id/detail', presaleController.getPresaleDetail);
 router.post('/', authMiddleware, roleMiddleware('clerk'), presaleController.createPresale);
 router.put('/:id', authMiddleware, roleMiddleware('clerk'), presaleController.updatePresale);
 router.put('/:id/arrived', authMiddleware, roleMiddleware(['clerk', 'warehouse']), presaleController.markAsArrived);

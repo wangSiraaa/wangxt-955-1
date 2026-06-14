@@ -11,6 +11,7 @@ const statusConfig: Record<Presale['status'], { label: string; color: string; bg
   upcoming: { label: '即将开始', color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Clock },
   active: { label: '预售中', color: 'text-green-600', bgColor: 'bg-green-50', icon: CheckCircle },
   ended: { label: '已结束', color: 'text-gray-500', bgColor: 'bg-gray-100', icon: Clock },
+  partial_arrived: { label: '部分到货', color: 'text-amber-600', bgColor: 'bg-amber-50', icon: AlertCircle },
   arrived: { label: '已到货', color: 'text-accent-600', bgColor: 'bg-accent-500/10', icon: BookOpen },
 };
 
