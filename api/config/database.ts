@@ -288,17 +288,18 @@ async function migrateDatabase(): Promise<void> {
 }
 
 async function seedInitialData(): Promise<void> {
-  const userCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM users');
+  const passwordHash = await bcrypt.hash('password', 10);
   
-  if (userCount && userCount.count === 0) {
-    const passwordHash = await bcrypt.hash('password', 10);
-    
+  // 用户表
+  const userCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM users');
+  if (!userCount || userCount.count === 0) {
     const users = [
       { id: 'u_clerk', username: 'clerk001', role: 'clerk', name: '李店员', phone: '13800138001', memberLevel: 'normal' },
       { id: 'u_member', username: 'member001', role: 'member', name: '王会员', phone: '13800138002', memberLevel: 'gold' },
       { id: 'u_warehouse', username: 'warehouse001', role: 'warehouse', name: '张仓管', phone: '13800138003', memberLevel: 'normal' },
       { id: 'u_member2', username: 'member002', role: 'member', name: '赵会员', phone: '13800138004', memberLevel: 'silver' },
       { id: 'u_member3', username: 'member003', role: 'member', name: '孙钻石', phone: '13800138005', memberLevel: 'diamond' },
+      { id: 'u_member4', username: 'member004', role: 'member', name: '周会员', phone: '13800138006', memberLevel: 'normal' },
     ];
 
     for (const user of users) {
@@ -307,7 +308,12 @@ async function seedInitialData(): Promise<void> {
         [user.id, user.username, passwordHash, user.role, user.name, user.phone, user.memberLevel]
       );
     }
+    console.log('Users seeded');
+  }
 
+  // 预售表
+  const presaleCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM presales');
+  if (!presaleCount || presaleCount.count === 0) {
     const presales = [
       {
         id: 'p_001',
@@ -364,18 +370,21 @@ async function seedInitialData(): Promise<void> {
     for (const p of presales) {
       await runQuery(
         `INSERT INTO presales (id, book_title, book_author, book_cover, book_isbn, price, deposit, 
-          total_stock, locked_stock, waitlisted_stock, presale_start_time, presale_end_time, 
+          total_stock, locked_stock, sold_stock, waitlisted_stock, presale_start_time, presale_end_time, 
           balance_deadline, pickup_deadline, status, description) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [p.id, p.bookTitle, p.bookAuthor, p.bookCover, p.bookIsbn, p.price, p.deposit,
-         p.totalStock, (p as any).lockedStock || 0, (p as any).waitlistedStock || 0, 
+         p.totalStock, (p as any).lockedStock || 0, (p as any).soldStock || 0, (p as any).waitlistedStock || 0, 
          p.presaleStartTime, p.presaleEndTime, p.balanceDeadline, p.pickupDeadline, p.status, p.description]
       );
     }
+    console.log('Presales seeded');
+  }
 
-    const orderCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM orders');
-    if (orderCount && orderCount.count === 0) {
-      const orders = [
+  // 订单表
+  const orderCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM orders');
+  if (!orderCount || orderCount.count === 0) {
+    const orders = [
         {
           id: 'o_001',
           orderNo: 'BS20260610001',
@@ -425,6 +434,23 @@ async function seedInitialData(): Promise<void> {
           pickupCode: '5Q8L2W',
           paidAt: dayjs().subtract(8, 'day').format('YYYY-MM-DD HH:mm:ss'),
         },
+        {
+          id: 'o_004',
+          orderNo: 'BS20260610004',
+          presaleId: 'p_003',
+          userId: 'u_member4',
+          userName: '周会员',
+          memberLevel: 'normal',
+          quantity: 1,
+          totalAmount: 68.00,
+          depositAmount: 25.00,
+          balanceAmount: 43.00,
+          paymentStatus: 'refunded',
+          pickupStatus: 'expired',
+          pickupCode: '7P9S3V',
+          batchNo: 1,
+          paidAt: dayjs().subtract(12, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        },
       ];
 
       for (const o of orders) {
@@ -437,7 +463,12 @@ async function seedInitialData(): Promise<void> {
            dayjs().subtract(10, 'day').format('YYYY-MM-DD HH:mm:ss')]
         );
       }
+      console.log('Orders seeded');
+    }
 
+    // 预售批次表
+    const batchCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM presale_batches');
+    if (!batchCount || batchCount.count === 0) {
       const batches = [
         {
           id: 'b_001',
@@ -472,70 +503,205 @@ async function seedInitialData(): Promise<void> {
            dayjs().subtract(15, 'day').format('YYYY-MM-DD HH:mm:ss')]
         );
       }
-
-      const waitlistEntries = [
-        {
-          id: 'w_001',
-          presaleId: 'p_003',
-          orderId: 'o_002',
-          userId: 'u_member2',
-          userName: '赵会员',
-          quantity: 1,
-          depositAmount: 25.00,
-          status: 'waiting',
-          priority: 2,
-          memberLevel: 'silver',
-          depositTime: dayjs().subtract(9, 'day').format('YYYY-MM-DD HH:mm:ss'),
-        },
-        {
-          id: 'w_002',
-          presaleId: 'p_003',
-          orderId: 'o_003',
-          userId: 'u_member3',
-          userName: '孙钻石',
-          quantity: 1,
-          depositAmount: 25.00,
-          status: 'waiting',
-          priority: 1,
-          memberLevel: 'diamond',
-          depositTime: dayjs().subtract(8, 'day').format('YYYY-MM-DD HH:mm:ss'),
-        },
-      ];
-
-      for (const w of waitlistEntries) {
-        await runQuery(
-          `INSERT INTO waitlist_entries (id, presale_id, order_id, user_id, user_name, quantity, 
-            deposit_amount, status, priority, member_level, deposit_time, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [w.id, w.presaleId, w.orderId, w.userId, w.userName, w.quantity,
-           w.depositAmount, w.status, w.priority, w.memberLevel, w.depositTime,
-           dayjs().subtract(9, 'day').format('YYYY-MM-DD HH:mm:ss')]
-        );
-      }
-
-      const arrivals = [
-        {
-          id: 'a_001',
-          presaleId: 'p_003',
-          batchId: 'b_001',
-          quantity: 50,
-          operatorId: 'u_warehouse',
-          remark: '第一批到货，共50册',
-          arrivedAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD HH:mm:ss'),
-        },
-      ];
-
-      for (const a of arrivals) {
-        await runQuery(
-          `INSERT INTO arrivals (id, presale_id, batch_id, quantity, arrived_at, operator_id, remark) 
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [a.id, a.presaleId, a.batchId, a.quantity, a.arrivedAt, a.operatorId, a.remark]
-        );
-      }
+      console.log('Batches seeded');
     }
 
-    console.log('Initial data seeded successfully');
+  // 候补贴
+  const waitlistCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM waitlist_entries');
+  if (!waitlistCount || waitlistCount.count === 0) {
+    const waitlistEntries = [
+      {
+        id: 'w_001',
+        presaleId: 'p_003',
+        orderId: 'o_002',
+        userId: 'u_member2',
+        userName: '赵会员',
+        quantity: 1,
+        depositAmount: 25.00,
+        status: 'waiting',
+        priority: 2,
+        memberLevel: 'silver',
+        depositTime: dayjs().subtract(9, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+      {
+        id: 'w_002',
+        presaleId: 'p_003',
+        orderId: 'o_003',
+        userId: 'u_member3',
+        userName: '孙钻石',
+        quantity: 1,
+        depositAmount: 25.00,
+        status: 'waiting',
+        priority: 1,
+        memberLevel: 'diamond',
+        depositTime: dayjs().subtract(8, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+    ];
+
+    for (const w of waitlistEntries) {
+      await runQuery(
+        `INSERT INTO waitlist_entries (id, presale_id, order_id, user_id, user_name, quantity, 
+          deposit_amount, status, priority, member_level, deposit_time, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [w.id, w.presaleId, w.orderId, w.userId, w.userName, w.quantity,
+         w.depositAmount, w.status, w.priority, w.memberLevel, w.depositTime,
+         dayjs().subtract(9, 'day').format('YYYY-MM-DD HH:mm:ss')]
+      );
+    }
+    console.log('Waitlist entries seeded');
   }
+
+  // 到货表
+  const arrivalCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM arrivals');
+  if (!arrivalCount || arrivalCount.count === 0) {
+    const arrivals = [
+      {
+        id: 'a_001',
+        presaleId: 'p_003',
+        batchNo: 1,
+        quantity: 50,
+        operatorId: 'u_warehouse',
+        remark: '第一批到货，共50册',
+        arrivedAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+    ];
+
+    for (const a of arrivals) {
+      await runQuery(
+        `INSERT INTO arrivals (id, presale_id, batch_no, quantity, arrived_at, operator_id, remark) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [a.id, a.presaleId, a.batchNo, a.quantity, a.arrivedAt, a.operatorId, a.remark]
+      );
+    }
+    console.log('Arrivals seeded');
+  }
+
+  // 退款记录表
+  const refundCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM refund_records');
+  if (!refundCount || refundCount.count === 0) {
+    const refundRecords = [
+      {
+        id: 'r_001',
+        orderId: 'o_004',
+        presaleId: 'p_003',
+        userId: 'u_member4',
+        userName: '周会员',
+        refundType: 'full',
+        refundStatus: 'completed',
+        refundReason: 'expired',
+        refundAmount: 25.00,
+        depositAmount: 25.00,
+        remark: '逾期未取书，退还订金',
+        operatorId: 'u_clerk',
+        createdAt: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+        completedAt: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+    ];
+
+    for (const r of refundRecords) {
+      await runQuery(
+        `INSERT INTO refund_records (id, order_id, presale_id, user_id, user_name, refund_type, 
+          refund_status, refund_reason, refund_amount, deposit_amount, remark, operator_id, 
+          created_at, completed_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [r.id, r.orderId, r.presaleId, r.userId, r.userName, r.refundType,
+         r.refundStatus, r.refundReason, r.refundAmount, r.depositAmount,
+         r.remark, r.operatorId, r.createdAt, r.completedAt]
+      );
+    }
+    console.log('Refund records seeded');
+  }
+
+  // 库存释放记录表
+  const releaseCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM stock_release_records');
+  if (!releaseCount || releaseCount.count === 0) {
+    const releaseRecords = [
+      {
+        id: 's_001',
+        orderId: 'o_004',
+        presaleId: 'p_003',
+        userId: 'u_member4',
+        userName: '周会员',
+        quantity: 1,
+        depositAmount: 25.00,
+        depositRetained: false,
+        reason: 'expired',
+        remark: '逾期未取书，释放库存，订金已退还',
+        operatorId: 'u_clerk',
+        createdAt: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+    ];
+
+    for (const s of releaseRecords) {
+      await runQuery(
+        `INSERT INTO stock_release_records (id, order_id, presale_id, user_id, user_name, quantity, 
+          deposit_amount, deposit_retained, reason, remark, operator_id, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [s.id, s.orderId, s.presaleId, s.userId, s.userName, s.quantity,
+         s.depositAmount, s.depositRetained ? 1 : 0, s.reason, s.remark,
+         s.operatorId, s.createdAt]
+      );
+    }
+    console.log('Stock release records seeded');
+  }
+
+  // 通知表
+  const notificationCount = await getQuery<{ count: number }>('SELECT COUNT(*) as count FROM notifications');
+  if (!notificationCount || notificationCount.count === 0) {
+    const notifications = [
+      {
+        id: 'n_001',
+        orderId: 'o_001',
+        userId: 'u_member',
+        type: 'pickup_ready',
+        content: '您预订的《三体》第1批次已到货，请在取书截止日前凭取书码到店取书。',
+        sentAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+      {
+        id: 'n_002',
+        orderId: 'o_004',
+        userId: 'u_member4',
+        type: 'expiry_warning',
+        content: '您预订的《三体》取书期限将至，请尽快到店取书，逾期订单将自动取消。',
+        sentAt: dayjs().subtract(2, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+      {
+        id: 'n_003',
+        orderId: 'o_004',
+        userId: 'u_member4',
+        type: 'order_cancelled',
+        content: '您预订的《三体》已逾期未取，订单已自动取消，订金已退还。',
+        sentAt: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+      {
+        id: 'n_004',
+        orderId: 'o_004',
+        userId: 'u_member4',
+        type: 'refund_completed',
+        content: '您的退款申请已处理，退款金额25.00元将在3个工作日内到账。',
+        sentAt: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+      {
+        id: 'n_005',
+        orderId: 'o_001',
+        userId: 'u_member',
+        type: 'batch_arrived',
+        content: '《三体》第1批次已到货50册，您的订单已分配到该批次。',
+        sentAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      },
+    ];
+
+    for (const n of notifications) {
+      await runQuery(
+        `INSERT INTO notifications (id, order_id, user_id, type, content, sent_at) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [n.id, n.orderId, n.userId, n.type, n.content, n.sentAt]
+      );
+    }
+    console.log('Notifications seeded');
+  }
+
+  console.log('Initial data seeded successfully');
 }
 
 export { db, runQuery, getQuery, allQuery };

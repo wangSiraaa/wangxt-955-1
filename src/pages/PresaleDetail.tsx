@@ -19,6 +19,8 @@ import {
   RefreshCw,
   XCircle,
   ListOrdered,
+  Undo2,
+  DollarSign,
 } from 'lucide-react';
 import { presaleApi, orderApi } from '../api/endpoints.js';
 import { useAuthStore } from '../store/useAuthStore.js';
@@ -51,7 +53,7 @@ const statusConfig: Record<
 
 interface TimelineEvent {
   time: string;
-  type: 'presale_start' | 'presale_end' | 'batch_expected' | 'batch_arrived' | 'balance_deadline' | 'pickup_deadline';
+  type: 'presale_start' | 'presale_end' | 'batch_expected' | 'batch_arrived' | 'balance_deadline' | 'pickup_deadline' | 'refund' | 'stock_release';
   title: string;
   description?: string;
   status: 'done' | 'current' | 'upcoming';
@@ -189,6 +191,26 @@ export default function PresaleDetail() {
         type: 'batch_arrived',
         title: `第 ${arrival.batchNo} 批实际到货`,
         description: `${arrival.quantity} 本`,
+        status: 'done',
+      });
+    });
+
+    detail.refunds.forEach((refund) => {
+      events.push({
+        time: refund.completedAt || refund.createdAt,
+        type: 'refund',
+        title: '退款处理',
+        description: `¥${refund.refundAmount} - ${refund.refundReason}`,
+        status: 'done',
+      });
+    });
+
+    detail.stockReleases.forEach((release) => {
+      events.push({
+        time: release.createdAt,
+        type: 'stock_release',
+        title: '库存释放',
+        description: `${release.quantity} 本 - ${release.depositRetained ? '订金已扣留' : '订金已退还'}`,
         status: 'done',
       });
     });
@@ -551,6 +573,30 @@ export default function PresaleDetail() {
                                 )}
                               />
                             )}
+                            {event.type === 'refund' && (
+                              <DollarSign
+                                className={cn(
+                                  'w-5 h-5',
+                                  event.status === 'done'
+                                    ? 'text-green-600'
+                                    : event.status === 'current'
+                                      ? 'text-accent-600'
+                                      : 'text-gray-400'
+                                )}
+                              />
+                            )}
+                            {event.type === 'stock_release' && (
+                              <Undo2
+                                className={cn(
+                                  'w-5 h-5',
+                                  event.status === 'done'
+                                    ? 'text-green-600'
+                                    : event.status === 'current'
+                                      ? 'text-accent-600'
+                                      : 'text-gray-400'
+                                )}
+                              />
+                            )}
                           </div>
                           {index < timeline.length - 1 && (
                             <div
@@ -620,11 +666,17 @@ export default function PresaleDetail() {
                     </div>
                     <div className="text-sm text-gray-700/70">剩余库存</div>
                   </div>
-                  <div className="p-6 bg-red-50 rounded-xl text-center col-span-2">
+                  <div className="p-6 bg-red-50 rounded-xl text-center">
                     <div className="text-3xl font-bold text-red-600 mb-1">
                       {detail.refunds.length}
                     </div>
                     <div className="text-sm text-red-700/70">退款记录</div>
+                  </div>
+                  <div className="p-6 bg-purple-50 rounded-xl text-center">
+                    <div className="text-3xl font-bold text-purple-600 mb-1">
+                      {detail.stockReleases.length}
+                    </div>
+                    <div className="text-sm text-purple-700/70">库存释放</div>
                   </div>
                 </div>
               )}

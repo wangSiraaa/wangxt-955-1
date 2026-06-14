@@ -17,11 +17,19 @@ interface StockReleaseRecordRow {
   created_at: string;
 }
 
+function parseStockReleaseRow(row: StockReleaseRecordRow): StockReleaseRecord {
+  const obj = toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>);
+  return {
+    ...obj,
+    depositRetained: row.deposit_retained === 1,
+  };
+}
+
 export async function findAll(): Promise<StockReleaseRecord[]> {
   const rows = await allQuery<StockReleaseRecordRow>(
     'SELECT * FROM stock_release_records ORDER BY created_at DESC'
   );
-  return rows.map(row => toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>));
+  return rows.map(parseStockReleaseRow);
 }
 
 export async function findByOrderId(orderId: string): Promise<StockReleaseRecord[]> {
@@ -29,7 +37,7 @@ export async function findByOrderId(orderId: string): Promise<StockReleaseRecord
     'SELECT * FROM stock_release_records WHERE order_id = ? ORDER BY created_at DESC',
     [orderId]
   );
-  return rows.map(row => toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>));
+  return rows.map(parseStockReleaseRow);
 }
 
 export async function findByPresaleId(presaleId: string): Promise<StockReleaseRecord[]> {
@@ -37,7 +45,7 @@ export async function findByPresaleId(presaleId: string): Promise<StockReleaseRe
     'SELECT * FROM stock_release_records WHERE presale_id = ? ORDER BY created_at DESC',
     [presaleId]
   );
-  return rows.map(row => toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>));
+  return rows.map(parseStockReleaseRow);
 }
 
 export async function findByUserId(userId: string): Promise<StockReleaseRecord[]> {
@@ -45,13 +53,13 @@ export async function findByUserId(userId: string): Promise<StockReleaseRecord[]
     'SELECT * FROM stock_release_records WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
-  return rows.map(row => toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>));
+  return rows.map(parseStockReleaseRow);
 }
 
 export async function findById(id: string): Promise<StockReleaseRecord | null> {
   const row = await getQuery<StockReleaseRecordRow>('SELECT * FROM stock_release_records WHERE id = ?', [id]);
   if (!row) return null;
-  return toCamelCase<StockReleaseRecord>(row as unknown as Record<string, unknown>);
+  return parseStockReleaseRow(row);
 }
 
 export async function create(releaseData: {

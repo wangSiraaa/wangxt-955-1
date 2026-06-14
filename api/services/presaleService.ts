@@ -41,6 +41,22 @@ export async function getPresaleDetail(id: string): Promise<PresaleDetailWithRel
       orderRepository.findByPresaleId(id),
     ]);
 
+  const soldStock = orders
+    .filter(o => 
+      o.paymentStatus === 'paid' && 
+      o.pickupStatus !== 'transferred' && 
+      o.pickupStatus !== 'expired' &&
+      o.pickupStatus !== 'waitlisted'
+    )
+    .reduce((sum, o) => sum + o.quantity, 0);
+
+  const lockedStock = orders
+    .filter(o => 
+      o.paymentStatus === 'paid' && 
+      o.pickupStatus === 'ready'
+    )
+    .reduce((sum, o) => sum + o.quantity, 0);
+
   return {
     ...presale,
     batches,
@@ -49,6 +65,9 @@ export async function getPresaleDetail(id: string): Promise<PresaleDetailWithRel
     stockReleases,
     waitlistCount,
     orderCount: orders.length,
+    soldStock,
+    lockedStock,
+    waitlistedStock: waitlistCount,
   };
 }
 
